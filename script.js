@@ -1251,10 +1251,16 @@ function settleCarousel(index, instant) {
   const from = car.x;
   stopCarouselTween();
 
-  /* The carousel drag/tween is an interaction the user is directly
-     driving, so it stays live in lite — but it jumps rather than springs,
-     because a spring tween on a phone competes with scrolling for frames. */
-  if (instant || HEAVY() || Math.abs(to - from) < 0.5) {
+  /* A single eased transform per frame is cheap — it is one composited
+     property on one element, not a layout or paint. The tween therefore stays
+     enabled on every profile.
+
+     It used to be skipped under `HEAVY()`, which made the carousel snap to the
+     nearest card the instant a finger lifted: the strip tracked the drag, then
+     teleported. That looked like a missing animation rather than a
+     deliberate simplification, and it is exactly the jank that was reported.
+     Only an explicitly instant request (keyboard/arrow/dot jumps) skips it. */
+  if (instant || Math.abs(to - from) < 0.5) {
     car.vx = 0;
     renderCarousel(to);
     return;

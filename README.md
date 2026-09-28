@@ -44,6 +44,7 @@ fonts/                self-hosted woff2 (Space Grotesk, Manrope, JetBrains Mono)
 .github/workflows/    deploy.yml — publishes the repo to GitHub Pages
 _tools/               local generators and checks (not published)
                        make_og.py · bump_version.py · check_publish.py
+                       measure_hero.py · verify_hero_fix.py
 .nojekyll             tells GitHub Pages to serve the files as-is
 ```
 
@@ -231,6 +232,78 @@ paths when the deployment is a **Pages artifact build** (the Actions
 workflow). Under the older "deploy from a branch" source, Pages ignores
 `404.html` and shows its own plain 404. The workflow is the reason to prefer
 Option A above.
+
+### Tablet and iOS notes
+
+The hero stage is a square cluster of layers — three spinning rings, a glass
+orb, two tilted orbits, the logo and four floating chips. It renders correctly
+on desktop but had three separate problems on iPad. One was a **WebKit-only
+compositing bug**; the other two were geometry that was always suspect but only
+became visible at tablet widths.
+
+- **Layer order is now explicit** rather than implied by source order:
+  `1` rings · `2` orb · `3` orbits · `4` logo · `5` chips.
+- **The logo is an explicit square** (`aspect-ratio: 1/1`, `height: auto`,
+  `object-fit: contain`). It was `width: 34%; height: 34%`, which measured
+  89×84 on iPad landscape — a non-square box that squashed the monogram. This
+  is a genuine distortion fix, independent of the Safari wedge below.
+- **Chips sit inside the stage.** The overhang (`right: -10%`, `left: -8%`)
+  pushed them past the orb into the hero copy at tablet widths, where the
+  section clipped them and the four read as one blob. A dedicated
+  `901–1180px` breakpoint covers iPad landscape, which stays two-column and so
+  never hit the `900px` stacking rule.
+
+`measure_hero.py` renders the real page in headless Chrome at iPad portrait,
+landscape, mini and desktop widths and asserts the geometry — logo squareness,
+chip/stage overflow, chip-on-chip overlap, horizontal scrollbar:
+
+```bash
+python -m http.server 8799
+python _tools/measure_hero.py http://localhost:8799/_probe.html
+```
+
+`verify_hero_fix.py` re-runs the same checks against the *pre-fix* stylesheet
+and confirms they fail there, so the checks cannot silently become vacuous.
+
+### The "cut" logo — the Safari wedge was real, and it was ours
+
+On iPad/Safari the mark rendered as a circle with roughly one eighth missing and
+looked like damaged artwork. **It was a genuine rendering bug, not the design.**
+The artwork is a monogram of `l` and `h` — **l**yceum **h**igher School of
+Economics — inside a 48×48 `viewBox`, and the ring is drawn as one **closed**
+path (`M24 1 … 47 24 … 24 47 … 1 24 Z`) with the glyphs spanning x≈14–37,
+i.e. essentially centred. There is no intentional gap.
+
+The cause was `transform-style: preserve-3d` on `.orb` combined with
+`rotate3d(1, .4, .2, 68deg)` on `.orb-orbit`. In a preserve-3d context WebKit
+intersects the tilted orbit planes with the parent's `border-radius: 50%` box
+and clips a wedge out of the composition. Chrome composites the identical
+layout correctly, which is why only Safari/iOS showed it.
+
+A second, independent bug made it worse: each orbit declared a static
+`transform: rotate3d(...)` **and** an `animation: spin` whose
+`to { transform: rotate(360deg) }` replaces the declared transform outright. The
+3D tilt was therefore discarded on *every* engine and never rendered, while
+`preserve-3d` stayed behind doing nothing except causing the clip. So the tilt
+you never saw and the wedge you did see had a single root cause.
+
+Fixed by dropping `preserve-3d` (nothing needs real 3D — the orbits only spin in
+2D) and by composing the tilt and the spin in single `spin-tilted` keyframe sets
+so both survive. The orbit ellipses now actually draw, which is a visual change
+from before: the rings read as tilted rather than as flat circles.
+
+Note `.brand-mark-ring` in the header is a separate `conic-gradient` arc with a
+real empty sweep (62%–92%), and it rotates. That one *is* authored that way and
+is unrelated to the hero bug.
+
+`_tools/measure_brand.py` reports the header ring's authored arc and box at
+iPad and desktop widths:
+
+```bash
+python _tools/measure_brand.py --build
+python -m http.server 8799
+python _tools/measure_brand.py
+```
 
 ## Accessibility notes
 

@@ -1727,6 +1727,11 @@ body.has-pointer .cursor {
   inset: 3%;
   display: grid;
   place-items: center;
+  /* Layer 1 of the stage. See the .orb-chip comment for the full order:
+     1 rings · 2 orb · 3 orbits · 4 logo · 5 chips. These used to rely on
+     source order alone, which WebKit does not honour for elements promoted
+     to their own compositing layer by `backdrop-filter`. */
+  z-index: 1;
 }
 .stage-ring {
   position: absolute;
@@ -1754,10 +1759,20 @@ body.has-pointer .cursor {
   width: 62%;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
-  transform-style: preserve-3d;
+  /* `transform-style: preserve-3d` is deliberately NOT set here.
+
+     It used to be, and on WebKit that made the tilted `.orb-orbit` rings
+     intersect the parent's rounded box: Safari clipped the composition to a
+     wedge, so the mark read as a pie with roughly one eighth missing. Chrome
+     composites the same layout correctly, which is why the defect was
+     iOS/Safari-only. Nothing needs real 3D here - the orbits only ever spin in
+     2D (see the note on .orb-orbit) - so flattening the orb removes the bug
+     and costs no visual fidelity. */
   transform: translate3d(calc(var(--p-x, 0) * 1px), calc(var(--p-y, 0) * 1px), 0);
   transition: transform 0.9s var(--ease-out);
   animation: orb-float 11s ease-in-out infinite;
+  /* Layer 2 of the stage. */
+  z-index: 2;
 }
 .orb-glass {
   position: absolute;
@@ -1797,10 +1812,19 @@ body.has-pointer .cursor {
   inset: 0;
   display: grid;
   place-items: center;
+  /* Layer 4 — above the orbits so the mark is never crossed by a ring. */
+  z-index: 4;
 }
 .orb-logo {
-  width: 34%;
-  height: 34%;
+  /* The mark is a circle inside a square 48x48 viewBox, so it must stay square
+     and centred. A percentage width *and* height resolved against the wrap
+     produced a non-square box (measured 89x84 on iPad landscape), which
+     squashed the monogram. An explicit square box makes the geometry
+     deterministic on every engine. */
+  width: 38%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
   filter: invert(1) drop-shadow(0 0 24px rgba(143, 176, 255, 0.75));
   opacity: 0.96;
   animation: logo-pulse 7s ease-in-out infinite;
@@ -1810,7 +1834,17 @@ body.has-pointer .cursor {
   inset: -4%;
   border-radius: 50%;
   border: 1px solid rgba(180, 205, 255, 0.22);
+  /* The tilt lives in the `spin` keyframes now, not here.
+
+     This used to carry a static `transform: rotate3d(1, .4, .2, 68deg)` while
+     also being animated by `spin`, whose `to { transform: rotate(360deg) }`
+     *replaces* the declared transform outright. The 3D tilt was therefore
+     discarded on every engine and never rendered, while `preserve-3d` on .orb
+     stayed behind to trigger the Safari wedge. `spin-tilted` keeps the tilt
+     and the spin in one keyframe set, so the ellipse is actually drawn. */
   transform: rotate3d(1, 0.4, 0.2, 68deg);
+  /* Layer 3 of the stage. */
+  z-index: 3;
 }
 .orb-orbit i {
   position: absolute;
@@ -1824,12 +1858,12 @@ body.has-pointer .cursor {
   box-shadow: 0 0 16px rgba(190, 214, 255, 0.95), 0 0 34px rgba(95, 134, 255, 0.8);
 }
 .orb-orbit--1 {
-  animation: spin 14s linear infinite;
+  animation: spin-tilted 14s linear infinite;
 }
 .orb-orbit--2 {
   inset: 10%;
   transform: rotate3d(-1, 0.6, 0.3, 74deg);
-  animation: spin 22s linear infinite reverse;
+  animation: spin-tilted-rev 22s linear infinite reverse;
 }
 .orb-orbit--2 i {
   width: 6px;
@@ -1854,25 +1888,33 @@ body.has-pointer .cursor {
   white-space: nowrap;
   user-select: none;
   -webkit-user-select: none;
+  /* Layer 5 of the stage. These sat at z-index: auto, so their paint order came
+     from source order alone — and because `backdrop-filter` promotes each to its
+     own compositing layer, iPad/Safari interleaved them with the orb and the
+     logo instead of drawing them cleanly on top. */
+  z-index: 5;
 }
+/* The offsets below used to overhang the orb (right: -10%, left: -8%). At tablet
+   widths that collided with the hero copy and was clipped by the section, which
+   made the four chips read as one overlapping blob. They now sit just inside. */
 .orb-chip--a {
-  top: 6%;
-  left: -6%;
+  top: 4%;
+  left: -2%;
   animation: chip-float 9.5s ease-in-out infinite;
 }
 .orb-chip--b {
   top: 30%;
-  right: -10%;
+  right: -2%;
   animation: chip-float 11.5s ease-in-out infinite reverse;
 }
 .orb-chip--c {
   bottom: 16%;
-  left: -8%;
+  left: -3%;
   animation: chip-float 13s ease-in-out infinite 0.6s;
 }
 .orb-chip--d {
-  bottom: 2%;
-  right: -4%;
+  bottom: 3%;
+  right: 0;
   animation: chip-float 10.5s ease-in-out infinite reverse 0.3s;
 }
 .stage-shadow {
@@ -3598,6 +3640,18 @@ body.is-idle .slide {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+/* Spin that keeps the orbit's 3D tilt. Declaring the tilt as a plain
+   `transform` on .orb-orbit and then animating `transform` silently discarded
+   the tilt, because an animated transform replaces the declared one outright.
+   Composing them in one keyframe set is the only way both survive. */
+@keyframes spin-tilted {
+  from { transform: rotate3d(1, 0.4, 0.2, 68deg) rotate(0deg); }
+  to   { transform: rotate3d(1, 0.4, 0.2, 68deg) rotate(360deg); }
+}
+@keyframes spin-tilted-rev {
+  from { transform: rotate3d(-1, 0.6, 0.3, 74deg) rotate(0deg); }
+  to   { transform: rotate3d(-1, 0.6, 0.3, 74deg) rotate(360deg); }
+}
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.55; transform: scale(0.82); }
@@ -3702,6 +3756,30 @@ body.is-idle .slide {
 /* ---------------------------------------------------------
    20 · Responsive
    --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   20 · Responsive
+   --------------------------------------------------------- */
+
+/* Tablet landscape — iPad Pro is 1024x1366 / 1180x820, so it sits *above* the
+   900px breakpoint and keeps the two-column hero. The stage is only ~470px
+   there while the four chips are fixed-size nowrap labels, so they overhung
+   the orb, collided with the copy and were clipped by the section. */
+@media (min-width: 901px) and (max-width: 1180px) {
+  .hero-stage {
+    max-width: 400px;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .orb-chip {
+    font-size: 8.2px;
+    padding: 6px 9px;
+    letter-spacing: 0.08em;
+  }
+  .orb-logo {
+    width: 36%;
+  }
+}
+
 @media (max-width: 1180px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3837,6 +3915,16 @@ body.is-idle .slide {
     max-width: 460px;
     margin-inline: auto;
     width: 100%;
+    /* room for the chips to overhang without colliding with the copy below */
+    margin-block: 8px 20px;
+  }
+  .orb-chip {
+    font-size: 8.4px;
+    padding: 6px 10px;
+    letter-spacing: 0.1em;
+  }
+  .orb-logo {
+    width: 34%;
   }
   .hero-scroll {
     display: none;
@@ -4198,10 +4286,16 @@ body.is-idle .slide {
 }
 .lite .reveal,
 .lite [data-reveal] {
-  /* Blur-in reveals re-rasterise the whole element. Fade only. */
-  transition: opacity 0.3s var(--ease-out) !important;
+  /* The blur-in reveal re-rasterises the whole element, so lite drops the blur
+     and shortens the travel. The entry motion is deliberately kept: an earlier
+     `transform: none` here cancelled it entirely, which made the scroll
+     animations look like they had been removed rather than simplified. */
+  transition: opacity 0.45s var(--ease-out), transform 0.45s var(--ease-out) !important;
   filter: none !important;
-  transform: none !important;
+}
+.lite .reveal:not(.is-inview),
+.lite [data-reveal]:not(.is-inview) {
+  transform: translate3d(0, 14px, 0);
 }
 .lite .view-panel,
 .lite .view-panel.is-active {
