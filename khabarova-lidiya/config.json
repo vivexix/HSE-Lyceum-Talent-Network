@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "4",
+        "q2_informatics_preference": "программирование",
+        "q3_learning_preference": "разбираться, как всё устроено",
+        "q6_work_preference": "зависит от задачи",
+        "q8_media_preference": "TikTok"
+    },
+    "about": {
+        "q4_ai_usage": "Вообще не использую",
+        "q5_desired_product": "Приложение для оценки, обсуждения и поиска фильмов/сериалов.",
+        "q7_unusual_hobby": "Умею стоять на голове",
+        "q9_unobvious_fact": "Играю на нескольких музыкальных инструментах, но никогда не ходила в музыкальную школу."
+    }
+}

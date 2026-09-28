@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "5",
+        "q2_informatics_preference": "программирование",
+        "q3_learning_preference": "разбираться, как всё устроено",
+        "q6_work_preference": "зависит от задачи",
+        "q8_media_preference": "TikTok"
+    },
+    "about": {
+        "q4_ai_usage": "для Д/З.",
+        "q5_desired_product": "видеоигры, Apple, TG, ...",
+        "q7_unusual_hobby": "играю на гитаре",
+        "q9_unobvious_fact": "люблю информатику."
+    }
+}

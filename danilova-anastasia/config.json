@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "3",
+        "q2_informatics_preference": "программирование",
+        "q3_learning_preference": "разбираться, как всё устроено",
+        "q6_work_preference": "зависит от задачи",
+        "q8_media_preference": "TikTok"
+    },
+    "about": {
+        "q4_ai_usage": "Задать вопрос, составить план для достижения цели в какой-то задаче",
+        "q5_desired_product": "Браслет, который будет соединён с транспортом по сети и человек модет поставить таймер сна до определённой остановки",
+        "q7_unusual_hobby": "Люблю решать судоку",
+        "q9_unobvious_fact": "Я года ходила в художку"
+    }
+}

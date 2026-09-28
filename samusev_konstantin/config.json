@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": "Funky ген"
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "4",
+        "q2_informatics_preference": "цифровые сервисы, программирование",
+        "q3_learning_preference": "уличать существующее, разбираться, как всё устроено",
+        "q6_work_preference": "зависит от задачи",
+        "q8_media_preference": "YouTube"
+    },
+    "about": {
+        "q4_ai_usage": "Для креативных задач или для того, чтобы разобраться в теме",
+        "q5_desired_product": "ИИ мультитул по подписке",
+        "q7_unusual_hobby": "Кажется, нет",
+        "q9_unobvious_fact": "Из тех, которые одноклассники ещё не знают, то думаю, первый заработок в 11 (не знаю что другое)"
+    }
+}

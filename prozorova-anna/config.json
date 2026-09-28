@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "1",
+        "q2_informatics_preference": "теория",
+        "q3_learning_preference": "придумывать новое; разбираться, как всё устроено",
+        "q6_work_preference": "в команде",
+        "q8_media_preference": "YouTube"
+    },
+    "about": {
+        "q4_ai_usage": "Для того, чтобы он объяснил мне то, что я не понимаю.",
+        "q5_desired_product": "никакой.",
+        "q7_unusual_hobby": "Я умею стоять на голове",
+        "q9_unobvious_fact": "Раньше я профессионально занималась плаванием"
+    }
+}

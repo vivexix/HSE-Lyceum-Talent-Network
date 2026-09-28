@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "3",
+        "q2_informatics_preference": "цифровые сервисы; программирование",
+        "q3_learning_preference": "разбираться, как всё устроено",
+        "q6_work_preference": "в команде",
+        "q8_media_preference": "YouTube и TikTok"
+    },
+    "about": {
+        "q4_ai_usage": "Для поиска с темой, которую не понял до конца",
+        "q5_desired_product": "Свою игру или свою нейросеть",
+        "q7_unusual_hobby": "Слушать viperr",
+        "q9_unobvious_fact": "Делаю музыку"
+    }
+}

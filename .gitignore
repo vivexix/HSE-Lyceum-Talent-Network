@@ -1,0 +1,13 @@
+# Local tooling and QA output — not part of the published site. What gets
+# published is exactly: index.html, script.js, styles.css, locales/, images/,
+# fonts/ and the per-candidate directories.
+_qa/
+_backup_original/
+agent_info/
+
+node_modules/
+
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log

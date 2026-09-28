@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "4",
+        "q2_informatics_preference": "теория",
+        "q3_learning_preference": "придумывать новое",
+        "q6_work_preference": "одному",
+        "q8_media_preference": "TikTok"
+    },
+    "about": {
+        "q4_ai_usage": "Для помощи в решении математических задач",
+        "q5_desired_product": "Сервис для брони коттеджей",
+        "q7_unusual_hobby": "Хоббихорсинг и ежедневное прослушивание газана",
+        "q9_unobvious_fact": "Я фанат Пантеры"
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "4",
+        "q2_informatics_preference": "программирование",
+        "q3_learning_preference": "придумывать новое",
+        "q6_work_preference": "зависит от задачи",
+        "q8_media_preference": "TikTok"
+    },
+    "about": {
+        "q4_ai_usage": "Чтобы вдохновляться чем-то",
+        "q5_desired_product": "Свой мессенджер",
+        "q7_unusual_hobby": "Люблю разбираться + интересоваться рыбами",
+        "q9_unobvious_fact": "У меня более 600+ прописанных самостоятельно прописанных и придуманных персонажей"
+    }
+}

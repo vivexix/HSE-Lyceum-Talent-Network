@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "4",
+        "q2_informatics_preference": "цифровые сервисы",
+        "q3_learning_preference": "разбираться, как всё устроено",
+        "q6_work_preference": "зависит от задачи",
+        "q8_media_preference": "Instagram"
+    },
+    "about": {
+        "q4_ai_usage": "Для помощи в учёбе",
+        "q5_desired_product": "Инструмент для редактирования учебных и структурных понятий по песням",
+        "q7_unusual_hobby": "Люблю читать фэнтези в приключениях",
+        "q9_unobvious_fact": "Планирую получить больше образования за границей."
+    }
+}

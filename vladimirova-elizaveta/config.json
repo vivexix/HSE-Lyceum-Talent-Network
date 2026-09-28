@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": "SWAG"
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "2",
+        "q2_informatics_preference": "цифровые сервисы",
+        "q3_learning_preference": "разбираться, как всё устроено",
+        "q6_work_preference": "зависит от задачи",
+        "q8_media_preference": "TikTok"
+    },
+    "about": {
+        "q4_ai_usage": "Чтобы составить расписание или решить, какую книгу буду читать",
+        "q5_desired_product": "Было бы прикольно в целом создать свой бизнес, специализацию не придумала",
+        "q7_unusual_hobby": "Засушиваю цветы и люблю кошмарить брата :)",
+        "q9_unobvious_fact": "Я очень люблю браслеты и зелёный чай."
+    }
+}

@@ -1,0 +1,9 @@
+# The published site is LF-only. Without this, a Windows machine with
+# core.autocrlf=true rewrites every text file on checkout and the diff churns.
+* text=auto eol=lf
+
+# Media and fonts must never be line-ending converted.
+*.woff2 binary
+*.jpg   binary
+*.png   binary
+*.svg   text eol=lf

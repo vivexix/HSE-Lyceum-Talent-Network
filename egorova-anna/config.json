@@ -1,0 +1,18 @@
+{
+    "character": {
+        "text_on_drawing": ""
+    },
+    "characteristics": {
+        "q1_informatics_confidence": "2",
+        "q2_informatics_preference": "теория",
+        "q3_learning_preference": "разбираться, как всё устроено",
+        "q6_work_preference": "зависит от задачи",
+        "q8_media_preference": "TikTok"
+    },
+    "about": {
+        "q4_ai_usage": "чтобы вы мне что-то объяснил",
+        "q5_desired_product": "новую видеоигру",
+        "q7_unusual_hobby": "нет",
+        "q9_unobvious_fact": "Три раза ломала руку и ногу"
+    }
+}
