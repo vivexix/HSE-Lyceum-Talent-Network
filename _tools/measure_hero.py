@@ -26,12 +26,12 @@ CHROME_CANDIDATES = [
     "/usr/bin/chromium",
 ]
 
-# label, width, height, dpr
+# label, width, height, dpr, touch
 VIEWPORTS = [
-    ("iPad Pro 11 portrait ", 834, 1194, 2),
-    ("iPad Pro 11 landscape", 1194, 834, 2),
-    ("iPad mini portrait   ", 744, 1133, 2),
-    ("desktop control      ", 1440, 900, 1),
+    ("iPad Pro 11 portrait ", 834, 1194, 2, True),
+    ("iPad Pro 11 landscape", 1194, 834, 2, True),
+    ("iPad mini portrait   ", 744, 1133, 2, True),
+    ("desktop control      ", 1440, 900, 1, False),
 ]
 
 # Injected into the page; the result is written into the DOM so it survives
@@ -76,8 +76,21 @@ function __probeHero() {
   }
 
   const logo = parts['.orb-logo'];
+  const gcs = (sel) => {
+    const el = document.querySelector(sel);
+    return el ? getComputedStyle(el) : null;
+  };
+  const stageCs = gcs('.hero-stage');
+  const cardCs = gcs('.stat-card');
+  const orbitCs = gcs('.orb-orbit--1');
   const out = {
     lite: document.documentElement.classList.contains('lite'),
+    hoverHover: window.matchMedia('(hover: hover)').matches,
+    pointerCoarse: window.matchMedia('(pointer: coarse)').matches,
+    stagePerspective: stageCs ? stageCs.perspective : null,
+    cardTransform: cardCs ? cardCs.transform : null,
+    cardTransformStyle: cardCs ? cardCs.transformStyle : null,
+    orbitAnimation: orbitCs ? orbitCs.animationName : null,
     stage: sr ? {w: sr.w, h: sr.h} : null,
     logoW: logo ? logo.w : null,
     logoH: logo ? logo.h : null,
@@ -125,7 +138,7 @@ def find_chrome():
     return None
 
 
-def measure(chrome, url, width, height, dpr):
+def measure(chrome, url, width, height, dpr, touch=False):
     with tempfile.TemporaryDirectory() as profile:
         cmd = [
             chrome,
@@ -138,8 +151,17 @@ def measure(chrome, url, width, height, dpr):
             f"--force-device-scale-factor={dpr}",
             "--virtual-time-budget=6000",
             "--dump-dom",
-            url,
         ]
+        if touch:
+            # Headless Chrome reports `hover: hover` / `pointer: fine` at every
+            # size, so the mobile 3D reduction would never actually be exercised.
+            # `--touch-events` alone does NOT change the reported media features;
+            # Blink's pointer/hover emulation is what has to be forced here.
+            # This combination reports pointerCoarse + no hover, i.e. a tablet.
+            cmd.insert(1, "--blink-settings=primaryPointerType=2,"
+                          "availablePointerTypes=2,"
+                          "primaryHoverType=2,availableHoverTypes=2")
+        cmd.append(url)
         # Chrome echoes the page's UTF-8 (the data is full of Cyrillic) while the
         # console locale here is cp1251, so decoding its output as text raises
         # UnicodeDecodeError. Work in bytes and decode only the probe payload.
@@ -191,8 +213,8 @@ def main():
     print(f"target  : {base}\n")
 
     failures = []
-    for label, w, h, dpr in VIEWPORTS:
-        data = measure(chrome, base, w, h, dpr)
+    for label, w, h, dpr, touch in VIEWPORTS:
+        data = measure(chrome, base, w, h, dpr, touch)
         if data is None:
             print(f"FAIL {label}  ({w}x{h} @{dpr}x)  no result")
             failures.append(label)
@@ -207,15 +229,32 @@ def main():
             problems.append("logo is not square")
         if data["hScroll"]:
             problems.append("horizontal scrollbar")
-        if problems:
-            failures.append(label)
+
+        # Regression guard for the mobile 3D reduction: a touch profile must
+        # resolve to no perspective, a flat stat-card and the 2D orbit spin.
+        # The iPad-landscape case matters most — it is NOT lite, so it is only
+        # covered by the pointer media query.
+        d3 = ""
+        if data.get("pointerCoarse"):
+            persp = data.get("stagePerspective") or "none"
+            flat = data.get("cardTransformStyle") == "flat"
+            has3d = "perspective(" in (data.get("cardTransform") or "")
+            orbit3d = "spin-tilted" in (data.get("orbitAnimation") or "")
+            clean = persp == "none" and flat and not has3d and not orbit3d
+            d3 = "3d=CLEAN" if clean else "3d=PRESENT"
+            if not clean:
+                problems.append("3D transforms still active on a touch profile")
+        elif not data.get("hoverHover"):
+            d3 = "3d=PRESENT(unexpected)"
 
         stage = data["stage"] or {}
         status = "ok  " if not problems else "FAIL"
+        if problems:
+            failures.append(label)
         print(f"{status} {label} ({w}x{h} @{dpr}x)  lite={data['lite']}  "
               f"stage={stage.get('w', 0):.0f}px  "
               f"logo={data['logoW'] or 0:.0f}x{data['logoH'] or 0:.0f}  "
-              f"chips={data['chipCount']}")
+              f"chips={data['chipCount']}  {d3}")
         for p in problems:
             print(f"       - {p}")
         for o in data["overflow"]:

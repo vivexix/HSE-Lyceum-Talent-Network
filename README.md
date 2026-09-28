@@ -158,8 +158,49 @@ only *continuous decorative work*, never content or features:
 | Symbol matrix | rAF canvas, ~4200 cells/frame | not started |
 | `backdrop-filter` | on glass, modal, header, toast | off, replaced with solid tints |
 | Cursor / magnetic / tilt / parallax | on | off |
+| Card 3D (`perspective` + `preserve-3d`) | on | flat 2D lift |
+| Hero orbit spin | 3D `rotate3d` tilt + spin | 2D spin, no tilt |
 | Language switch | full-page blur wipe | 0.2s cross-fade |
 | Smooth scroll | on | off |
+
+### 3D is not gated on `.lite` alone
+
+The card tilt *script* is already inert on mobile — `initTilt()` bails on
+`!FINE_POINTER` — but the *stylesheet* still asked for a 3D context on every
+card, because the transform carried `perspective(1100px) rotateX() rotateY()`
+even when all three custom properties were `0deg`. A permanent perspective is
+not free: it forces a composited layer that WebKit rasterises with 3D
+transforms, which is what made cards stutter while scrolling on a tablet.
+
+The hero orbits are the other permanent 3D cost: they animate `rotate3d(...)`
+on a loop, so a rotating 3D transform is recomposited every frame for as long
+as the hero is on screen.
+
+Both are now reduced on touch devices, keeping the motion and dropping the 3D:
+
+- `.card` / `.slide` / `.panel` / `.stat-card` / `.modal-panel` / `.view-panel`
+  keep a 2D `translateY` lift; the perspective, both rotations and
+  `transform-style: preserve-3d` are dropped. Every hover affordance (border,
+  glow, `::after` sheen) is a background or box-shadow change and is untouched.
+- The orbits still spin, just in 2D.
+- Desktop is unchanged and keeps the full treatment.
+
+Critically this is keyed on **pointer type**, not on `.lite`. The lite
+heuristic in `index.html` treats a device as lite on `(hover: none) and
+(pointer: coarse)`, a viewport under 820px, reduced motion, low memory, few
+cores or save-data — and an **iPad in landscape satisfies none of them**: it
+is 1194px wide, reports `hover: hover`, and has plenty of memory and cores.
+So it was *not* lite and kept the full 3D, which is exactly the "brilliant on
+PC, laggy on a tablet" case. `@media (hover: none), (pointer: coarse)` covers
+that gap.
+
+`measure_hero.py` asserts this rather than assuming it. It emulates a coarse
+pointer via `--blink-settings` (plain `--touch-events` does not change the
+reported media features) and reports `3d=CLEAN` / `3d=PRESENT` per viewport;
+a touch profile that still resolves to a perspective, `preserve-3d` or
+`spin-tilted` fails the run. Reverting just the media query makes the
+non-lite iPad-landscape case fail while the lite profiles still pass, so the
+guard is not vacuous.
 
 The two things that actually cost frames on a phone are the large animated
 `blur()` and `backdrop-filter` — both are re-rasterised whenever the page
