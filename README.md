@@ -42,7 +42,8 @@ fonts/                self-hosted woff2 (Space Grotesk, Manrope, JetBrains Mono)
 <lastname-firstname>/ one directory per candidate:
                       config.json · photo.jpg|png · form.jpg|png
 .github/workflows/    deploy.yml — publishes the repo to GitHub Pages
-_tools/               local generators (not published)
+_tools/               local generators and checks (not published)
+                       make_og.py · bump_version.py · check_publish.py
 .nojekyll             tells GitHub Pages to serve the files as-is
 ```
 
@@ -184,6 +185,52 @@ depends on `mix-blend-mode: soft-light`, which some Android compositors skip.
 A blend-free dither (`.bg-field::after`, a tiled SVG noise texture at 4.5%
 opacity in normal blend mode) is applied on all profiles, since banding is a
 display-capability issue rather than a performance one.
+
+### Deploying without the "it didn't work" trap
+
+GitHub Pages serves **every** file with `Cache-Control: max-age=600` and an
+`ETag`. Ten minutes is long enough that a correct deploy looks broken: the
+browser reloads the HTML but keeps reusing the previous `styles.css` and
+`script.js` from its cache, so you are debugging a mix of old and new code.
+This is not hypothetical — it is what made the custom-cursor fix appear to
+fail on the live site while working perfectly on a local server.
+
+Two defences, both in place:
+
+1. **Versioned asset URLs.** The stylesheet and script carry a `?v=` token
+   (`styles.css?v=20260928-1`). A new value is a new URL, so a cached copy
+   can never be reused. **Bump it whenever you change CSS or JS:**
+
+   ```bash
+   python _tools/bump_version.py
+   ```
+
+   The token is a date, so a re-run on the same day is a no-op unless you
+   pass `--force`. `check_publish.py` fails loudly if the tokens in
+   `index.html` and `404.html` ever drift apart, since a mismatch means the
+   page mixes a new stylesheet with an old script.
+
+2. **Verify what is actually live, not what your cache holds.** To check the
+   deployed files rather than your local copy:
+
+   ```
+   https://<user>.github.io/<repo>/styles.css?nocache=1
+   ```
+
+   If a fix "does not work" on the live site but does locally, fetch that URL
+   first. If the content is current, it is caching; if it is old, the deploy
+   has not happened yet.
+
+To bypass the cache while testing by hand, use a hard reload
+(`Ctrl`/`Cmd` + `Shift` + `R`) or open the site in a private window.
+
+### 404 page
+
+`404.html` is uploaded with the site, but GitHub only serves it for unknown
+paths when the deployment is a **Pages artifact build** (the Actions
+workflow). Under the older "deploy from a branch" source, Pages ignores
+`404.html` and shows its own plain 404. The workflow is the reason to prefer
+Option A above.
 
 ## Accessibility notes
 

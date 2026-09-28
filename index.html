@@ -39,7 +39,23 @@
   <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
 
-  <link rel="stylesheet" href="styles.css" />
+  <!-- ============================================================
+       Cache busting.
+
+       GitHub Pages serves every file with `Cache-Control: max-age=600`
+       and an ETag. Ten minutes is long enough that a freshly deployed
+       fix looks like it did not work: the browser keeps reusing the
+       previous styles.css and script.js while the HTML updates
+       underneath them. That is exactly how the custom-cursor fix
+       appeared broken — the live files were correct, the cached copies
+       were not.
+
+       `?v=` makes the URL new on every deploy, so a stale copy can never
+       be reused. Convention: append the new value here and bump the
+       matching number in the <script> tag at the end of <body> once,
+       whenever CSS or JS changes.
+       ============================================================ -->
+  <link rel="stylesheet" href="styles.css?v=20260928-1" />
 
   <!-- ============================================================
        Render-profile detection — must run BEFORE first paint.
@@ -643,6 +659,7 @@
     <span class="cursor-label" id="cursorLabel"></span>
   </div>
 
-  <script src="script.js"></script>
+  <!-- `?v=` must match the stylesheet above — see the cache-busting note in <head>. -->
+  <script src="script.js?v=20260928-1"></script>
 </body>
 </html>

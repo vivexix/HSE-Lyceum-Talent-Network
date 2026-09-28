@@ -122,6 +122,11 @@ h = open("index.html", encoding="utf-8").read()
 css = open("styles.css", encoding="utf-8").read()
 js = open("script.js", encoding="utf-8").read()
 
+
+def h_src(name):
+    """Read an HTML file by name (used for the cache-busting checks below)."""
+    return open(name, encoding="utf-8").read()
+
 print()
 print("meta property tags:", len(re.findall(r"<meta\s+property=", h)))
 print("og:image          :", re.findall(r'property="og:image" content="([^"]+)"', h))
@@ -135,7 +140,7 @@ i_cursor = h.find('id="cursor"')
 i_modal = h.find('id="modal"')
 i_toast = h.find('id="toastRegion"')
 i_veil = h.find('id="langVeil"')
-i_script = h.find('src="script.js"')
+i_script = h.find('src="script.js')
 print()
 print("cursor count            :", h.count('id="cursor"'))
 print("cursor after modal      :", i_cursor > i_modal)
@@ -210,4 +215,22 @@ for path, exists in CASES:
 
 print()
 print("404 base resolution:", "all cases pass" if not bad else f"FAILURES: {bad}")
+
+# --- cache busting ----------------------------------------------------------
+# GitHub Pages serves every asset with max-age=600, so styles.css/script.js
+# must carry a ?v= token or a deploy can look broken for ten minutes. All
+# references must share one value, or the page runs a mix of old and new.
+print()
+tokens = {}
+for f in ("index.html", "404.html"):
+    toks = set(re.findall(r'(?:href|src)="(?:styles\.css|script\.js)\?v=([0-9A-Za-z._-]+)"', h_src(f)))
+    tokens[f] = toks
+    print(f"{f:<12} tokens:", sorted(toks) or "NONE")
+allt = set().union(*tokens.values())
+print("single shared token :", len(allt) == 1, sorted(allt))
+print("styles versioned    :", "styles.css?v=" in h_src("index.html"))
+print("script versioned    :", "script.js?v=" in h_src("index.html"))
+print("404 versioned       :", "styles.css?v=" in h_src("404.html"))
+# A bare, unversioned reference would still hit the cached copy.
+print("no bare references  :", not re.search(r'(?:href|src)="(?:styles\.css|script\.js)"', h_src("index.html")))
 
