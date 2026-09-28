@@ -4264,6 +4264,23 @@ body.is-idle .slide {
   background: rgba(12, 17, 36, 0.97);
 }
 
+/* The hero orbits are the other permanent 3D context. They animate
+   `rotate3d(...)` on a loop, which means a rotating 3D transform is being
+   recomposited every frame for the whole time the hero is on screen. The spin
+   itself is the effect people recognise, so it is kept — but on lite it spins
+   in 2D, dropping the tilt that the rotation carried. The rings still turn; the
+   hero just stops asking the GPU for a 3D transform it barely used. */
+.lite .orb-orbit--1 {
+  animation: spin 14s linear infinite;
+}
+.lite .orb-orbit--2 {
+  transform: none;
+  animation: spin 22s linear infinite reverse;
+}
+.lite .hero-stage {
+  perspective: none;
+}
+
 /* Ambient blur layers that exist only to soften the background. */
 .lite .pointer-aura,
 .lite .cursor-halo,
@@ -4289,6 +4306,72 @@ body.is-idle .slide {
 .lite .modal-panel,
 .lite .view-panel {
   transition-duration: 0.18s;
+}
+
+/* 3D on touch devices.
+
+   The tilt *script* is already inert on mobile — initTilt() bails on
+   !FINE_POINTER — but the *stylesheet* still asked for a 3D context on every
+   card, because the transform carried `perspective(1100px) rotateX() rotateY()`
+   even when all three custom properties were 0deg. A permanent perspective is
+   not free: it forces the element onto a composited layer that WebKit
+   rasterises with 3D transforms, and it keeps the card out of the cheap
+   paint-only path for as long as it is on screen. On a phone that is the
+   difference between a card that scrolls and one that stutters.
+
+   So on lite the perspective and the two rotations are dropped and only the
+   2D translateY lift is kept. Every hover affordance (border, glow, the
+   ::after sheen) is a background or box-shadow change and is untouched, so
+   the cards still respond to touch and still look the same — they simply stop
+   carrying a 3D context they never used. */
+.lite .card,
+.lite .slide,
+.lite .panel,
+.lite .stat-card,
+.lite .modal-panel,
+.lite .view-panel {
+  transform: translateY(var(--ty, 0px));
+}
+.lite .stat-card {
+  transform-style: flat;
+}
+
+/* The `.lite` class alone is not enough to cover tablets.
+
+   The lite heuristic in index.html keys on `(hover: none) and (pointer: coarse)`,
+   a small viewport, reduced motion, low memory, few cores or save-data. An
+   iPad in landscape is none of those: it is 1194px wide, it reports
+   `hover: hover`, and it has plenty of memory and cores — so it is NOT lite,
+   and it kept the full 3D treatment. That is precisely the "brilliant on PC,
+   laggy on a tablet" case.
+
+   So the 3D reduction is additionally keyed on the pointer type itself, which
+   is the real signal: a touch device has no hover, so the tilt and the 3D
+   context are dead weight there regardless of how capable the hardware is.
+   Desktop keeps every effect. This block only needs to cover what lite misses,
+   and the selectors are the same. */
+@media (hover: none), (pointer: coarse) {
+  .card,
+  .slide,
+  .panel,
+  .stat-card,
+  .modal-panel,
+  .view-panel {
+    transform: translateY(var(--ty, 0px));
+  }
+  .stat-card {
+    transform-style: flat;
+  }
+  .orb-orbit--1 {
+    animation: spin 14s linear infinite;
+  }
+  .orb-orbit--2 {
+    transform: none;
+    animation: spin 22s linear infinite reverse;
+  }
+  .hero-stage {
+    perspective: none;
+  }
 }
 .lite .btn {
   transition-duration: 0.15s;
