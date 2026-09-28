@@ -40,6 +40,63 @@
   <link rel="preload" href="fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
 
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- ============================================================
+       Render-profile detection — must run BEFORE first paint.
+
+       The motion layer is expensive by design (three viewport-sized
+       blurred auroras animated every frame, a backdrop-filtered glass
+       panel on most surfaces, a rAF symbol canvas). On a phone that
+       costs more than the whole rest of the page, so mobile gets a
+       deliberately lighter treatment.
+
+       This runs inline and synchronously, before <body> exists, and
+       only ever *adds* a class to <html>. CSS keys the whole lite
+       treatment off that class, so there is no flash of the heavy
+       version and no JavaScript needed to render the page at all.
+       ============================================================ -->
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var lite = false;
+
+      try {
+        /* 1. Explicit override. ?lite=1 forces it on (handy for testing
+              the desktop build on a phone); ?lite=0 forces it off. */
+        var forced = new URLSearchParams(location.search).get("lite");
+        if (forced === "1") lite = true;
+        else if (forced === "0") lite = false;
+      } catch (e) { /* URLSearchParams unsupported — fall through */ }
+
+      if (!lite && forced !== "0") {
+        /* 2. No hover and no fine pointer means a touch device: there is
+              no custom cursor to serve and no hover state to delight. */
+        var touch = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
+        /* 3. Small viewport. */
+        var narrow = window.matchMedia("(max-width: 820px)").matches;
+
+        /* 4. The user asked the OS to cut animation — honour it as a
+              strong signal, not just for the cursor and canvas. */
+        var calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        /* 5. Reported device pressure. `deviceMemory` and
+              `hardwareConcurrency` are Chromium-only and simply absent
+              elsewhere, in which case they must not count as evidence. */
+        var lowMemory =
+          typeof navigator.deviceMemory === "number" && navigator.deviceMemory <= 4;
+        var fewCores =
+          typeof navigator.hardwareConcurrency === "number" && navigator.hardwareConcurrency <= 4;
+
+        /* 6. The user asked the network to save data. */
+        var saveData = !!(navigator.connection && navigator.connection.saveData);
+
+        lite = touch || narrow || calm || lowMemory || fewCores || saveData;
+      }
+
+      if (lite) root.classList.add("lite");
+    })();
+  </script>
 </head>
 <body class="is-booting">
   <a class="skip-link" href="#candidates">Skip to candidates</a>
@@ -64,14 +121,6 @@
   <!-- Scroll progress rail -->
   <div class="scroll-rail" aria-hidden="true">
     <div class="scroll-progress" id="scrollProgress"></div>
-  </div>
-
-  <!-- Custom glowing magnetic cursor -->
-  <div class="cursor" id="cursor" aria-hidden="true">
-    <span class="cursor-halo"></span>
-    <span class="cursor-ring"></span>
-    <span class="cursor-dot"></span>
-    <span class="cursor-label" id="cursorLabel"></span>
   </div>
 
   <!-- ============================================================
@@ -572,6 +621,26 @@
        viewport every frame is what made the previous veil stutter. -->
   <div class="lang-veil" id="langVeil" aria-hidden="true">
     <span class="lang-veil-bloom"></span>
+  </div>
+
+  <!-- ============================================================
+       Custom glowing magnetic cursor.
+
+       Deliberately the LAST element in <body>, after the modal, the
+       toast and the language veil. A high z-index alone is not enough
+       on WebKit: `backdrop-filter` on .modal-panel and .toast promotes
+       those to their own compositing layers, and once that happens the
+       paint order stops being a flat comparison of z-index values — the
+       cursor was still being covered by the profile modal on iOS/macOS
+       even at z-index 500. Being last in tree order makes it win the
+       layer sort on every engine, and the z-index keeps it correct
+       among its siblings.
+       ============================================================ -->
+  <div class="cursor" id="cursor" aria-hidden="true">
+    <span class="cursor-halo"></span>
+    <span class="cursor-ring"></span>
+    <span class="cursor-dot"></span>
+    <span class="cursor-label" id="cursorLabel"></span>
   </div>
 
   <script src="script.js"></script>
