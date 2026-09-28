@@ -203,7 +203,7 @@ body.is-lang-in [data-lang-root] {
 .lang-veil {
   position: fixed;
   inset: 0;
-  z-index: 250; /* over the header (200), under the cursor (300) and modal (400) */
+  z-index: 250; /* over the header (200), under the modal (400) and the cursor (500) */
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -644,7 +644,13 @@ body.has-pointer .pointer-aura {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 300;
+  /* Top of the stack on purpose. The native cursor is retired globally
+     (`cursor: none` on body.has-pointer *), so if this element ever falls
+     behind an opaque layer the user is left with no pointer at all. The
+     profile modal (400) and the toast (420) both sit above the header (200)
+     and the language veil (250), so the cursor has to clear 420 as well —
+     otherwise it vanishes the moment a profile is opened. */
+  z-index: 500;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.35s var(--ease-out);

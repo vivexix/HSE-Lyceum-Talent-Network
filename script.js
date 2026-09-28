@@ -879,6 +879,23 @@ function buildSlide(c, index) {
 }
 
 /* ---------- 13. Load all student directories ---------- */
+
+/* A failed load has two very different causes, and the fix differs:
+     · file://  — the browser blocks fetch() on local files, so the page must
+                  be served over HTTP. Only meaningful during development.
+     · http(s):// — the site is published and something went wrong on the
+                  network or the server. Telling a visitor to run a local web
+                  server would be nonsense, so that copy is swapped out. */
+function showLoadError() {
+  if (!loadError) return;
+  const fromFileSystem = location.protocol === "file:";
+  const fsMsg = loadError.querySelector("[data-load-error-filesystem]");
+  const netMsg = loadError.querySelector("[data-load-error-network]");
+  if (fsMsg) fsMsg.hidden = !fromFileSystem;
+  if (netMsg) netMsg.hidden = fromFileSystem;
+  loadError.hidden = false;
+}
+
 async function loadCandidates() {
   const skeletons = Array.from({ length: 6 }, () => el("div", "skeleton-card"));
   grid.replaceChildren(...skeletons);
@@ -886,7 +903,7 @@ async function loadCandidates() {
   const results = await Promise.all(
     STUDENT_DIRS.map(async (slug) => {
       try {
-        const res = await fetch(`${slug}/config.json`, { cache: "no-store" });
+        const res = await fetch(`${slug}/config.json`, { cache: "force-cache" });
         if (!res.ok) return null;
         return buildCandidate(slug, await res.json());
       } catch {
@@ -899,7 +916,7 @@ async function loadCandidates() {
   if (!candidates.length) {
     grid.replaceChildren();
     showView("catalog", { force: true });
-    loadError.hidden = false;
+    showLoadError();
     resultCount.textContent = I18N.dict["status.noCandidates"] || "No candidates available";
     setFooterStatus(I18N.dict["footer.unavailable"] || "Data unavailable", true);
     return false;
@@ -2390,6 +2407,10 @@ function initEvents() {
   });
   searchClear.addEventListener("click", resetSearch);
   emptyReset.addEventListener("click", resetSearch);
+
+  // Retry affordance in the "could not load" panel (see showLoadError).
+  const reloadBtn = loadError && loadError.querySelector("[data-reload]");
+  if (reloadBtn) reloadBtn.addEventListener("click", () => location.reload());
 
   modal.addEventListener("click", (e) => {
     if (e.target.closest("[data-modal-close]")) closeModal();

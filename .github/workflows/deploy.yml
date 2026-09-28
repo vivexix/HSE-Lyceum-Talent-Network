@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+
+# The site is plain static files with no build step, so this workflow only has to
+# upload the repository as an artifact and publish it. `actions/configure-pages`
+# resolves the correct base path automatically, which is what lets the same
+# relative URLs work from a user page and from a project subdirectory.
+on:
+  push:
+    branches: [main]
+  # Allows a deploy to be triggered from the Actions tab without a dummy commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deploys at once, and let a newer commit supersede an in-flight
+# run instead of queuing behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+          # The whole repo is the site, minus local tooling that is committed
+          # for reproducibility (the og-cover.png generator) and VCS metadata.
+          exclude: |
+            _tools/
+            .github/
+            .gitignore
+            .gitattributes
+            README.md
+      - id: deployment
+        uses: actions/deploy-pages@v4

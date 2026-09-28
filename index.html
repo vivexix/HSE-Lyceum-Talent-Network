@@ -10,6 +10,30 @@
 
   <link rel="icon" type="image/svg+xml" href="images/website-logo.svg" />
 
+  <!-- Social preview. og:image is intentionally a relative path: the site is
+       published from a repository subdirectory, where an absolute URL cannot
+       be known ahead of time. Crawlers resolve it against the page URL, and
+       Twitter/X falls back to the card generated from the page title. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="HSE Lyceum Talent Network" />
+  <meta property="og:title" content="HSE Lyceum Talent Network — Informatics Class Portal" />
+  <meta
+    property="og:description"
+    content="An interactive portal for the informatics class applicant pool: fourteen transcribed profiles with focus areas, confidence signals, working styles and the scanned application forms."
+  />
+  <meta property="og:image" content="images/og-cover.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="ru_RU" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="HSE Lyceum Talent Network — Informatics Class Portal" />
+  <meta
+    name="twitter:description"
+    content="Fourteen transcribed applicant profiles — searchable, filterable, with the original scanned forms."
+  />
+  <meta name="twitter:image" content="images/og-cover.png" />
+
   <!-- Self-hosted variable typefaces (no third-party requests, no Apple SF) -->
   <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -385,10 +409,19 @@
               <span class="load-error-badge" aria-hidden="true">!</span>
               <div>
                 <p class="load-error-title"><strong>Couldn’t load candidate data.</strong></p>
-                <p class="load-error-body">
+                <!-- Two causes, two different fixes. The file:// advice is only
+                     correct when the page was opened from disk; script.js swaps
+                     in a network message when the site is served over HTTP, so
+                     a published visitor is never told to run a local server. -->
+                <p class="load-error-body" data-load-error-filesystem>
                   Open this site through a local server instead of the file system — run
                   <code>python -m http.server 8000</code> in the project folder and visit
                   <code>http://localhost:8000</code>.
+                </p>
+                <p class="load-error-body" data-load-error-network hidden>
+                  The candidate profiles could not be fetched. This is usually a
+                  temporary network problem — check your connection and
+                  <button class="link-btn" type="button" data-reload>reload the page</button>.
                 </p>
               </div>
             </div>

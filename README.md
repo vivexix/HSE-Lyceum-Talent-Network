@@ -35,11 +35,14 @@ view swap. Every one of those honours `prefers-reduced-motion: reduce`.
 index.html            markup (English strings live inline, tagged data-i18n)
 script.js             data pipeline + interaction + motion, one file
 styles.css            design tokens, components, keyframes, media queries
+404.html              styled not-found page, served by GitHub Pages
 locales/ru.json       Russian overrides for every tagged string
-images/               logo + favicon (SVG)
+images/               logo + favicon (SVG) + og-cover.png (social card)
 fonts/                self-hosted woff2 (Space Grotesk, Manrope, JetBrains Mono)
 <lastname-firstname>/ one directory per candidate:
                       config.json · photo.jpg|png · form.jpg|png
+.github/workflows/    deploy.yml — publishes the repo to GitHub Pages
+_tools/               local generators (not published)
 .nojekyll             tells GitHub Pages to serve the files as-is
 ```
 
@@ -96,13 +99,41 @@ Any static file server will do, including the Live Server extension in VS Code.
 ## Publishing to GitHub Pages
 
 The site uses only relative paths, so it works from a project subdirectory as
-well as from a user page:
+well as from a user page.
 
-1. Push the repository to GitHub.
-2. **Settings → Pages → Build and deployment → Source: Deploy from a branch**,
-   branch `main`, folder `/ (root)`.
-3. Done — `.nojekyll` stops Pages from running the files through Jekyll, and the
-   site is served from `https://<user>.github.io/<repo>/`.
+**Option A — automatic deploys (recommended).** `.github/workflows/deploy.yml`
+publishes every push to `main`. Set **Settings → Pages → Build and deployment →
+Source: GitHub Actions** once, then just push. The workflow uploads the repo
+with `actions/upload-pages-artifact` and excludes `_tools/`, `.github/` and the
+dotfiles; there is no build step because there is nothing to build.
+
+**Option B — deploy from a branch.** **Settings → Pages → Build and
+deployment → Source: Deploy from a branch**, branch `main`, folder
+`/ (root)`. Use this if you would rather not grant the Actions workflow
+permission. Note that Pages caps a published site at **1 GB**, which this repo
+(~31 MB, mostly the scanned forms) sits well inside.
+
+`.nojekyll` stops Pages from running the files through Jekyll, and the result is
+served from `https://<user>.github.io/<repo>/`.
+
+Once published, two things are worth knowing:
+
+- `404.html` is served for unknown paths. Because Pages returns it *at the
+  requested URL*, its home link is resolved by probing upward for `index.html`
+  rather than by a hard-coded path — otherwise a mistyped deep link would point
+  the visitor one directory too high.
+- If the candidate data ever fails to load, the message adapts to the protocol.
+  Served over HTTP it offers a reload; only a page opened from disk is told to
+  start a local web server.
+
+### Sharing links
+
+Links are canonical: `?c=<slug>` opens a profile directly and `?q=<query>` runs
+a search, and both are what the in-page "copy link" button produces. Because
+there is one page and no routing, no `sitemap.xml` is needed. The Open Graph
+tags in `index.html` use a **relative** `og:image` (`images/og-cover.png`)
+because the absolute URL is not knowable from inside the repository; regenerate
+that card with `python _tools/make_og.py` if the wording changes.
 
 ## Accessibility notes
 
