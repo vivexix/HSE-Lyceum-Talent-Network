@@ -373,7 +373,10 @@ async function setLang(lang) {
     refreshDynamicText();
   };
 
-  if (REDUCED() || !document.body) {
+  /* Lite/reduced-motion: swap instantly, no full-page blur wipe. The
+     `!document.body` guard is kept from the original — the veil classes
+     below need a body to attach to. */
+  if (HEAVY() || !document.body) {
     swap();
     return;
   }
@@ -465,6 +468,21 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const pad2 = (n) => String(n).padStart(2, "0");
 const REDUCED = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const FINE_POINTER = () => window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+/* Lite render profile — mirrors the inline detector in index.html, which
+   sets `.lite` on <html> before first paint. Re-read the class rather than
+   recomputing the heuristics: the DOM is the single source of truth, so the
+   two can never disagree about what profile is active.
+
+   This only gates *continuous decorative work* (the rAF canvas, the
+   pointer followers, the blur choreography). Every feature and all content
+   stay available in lite mode. */
+const LITE = () => document.documentElement.classList.contains("lite");
+
+/* Expensive per-frame loops are skipped outright on lite rather than merely
+   hidden with CSS — a hidden <canvas> whose rAF loop still runs would keep
+   burning battery for nothing. */
+const HEAVY = () => REDUCED() || LITE();
 
 /* ---------- 3. Media resolution (.jpg / .png) ---------- */
 const mediaCache = new Map();
@@ -879,6 +897,23 @@ function buildSlide(c, index) {
 }
 
 /* ---------- 13. Load all student directories ---------- */
+
+/* A failed load has two very different causes, and the fix differs:
+     · file://  — the browser blocks fetch() on local files, so the page must
+                  be served over HTTP. Only meaningful during development.
+     · http(s):// — the site is published and something went wrong on the
+                  network or the server. Telling a visitor to run a local web
+                  server would be nonsense, so that copy is swapped out. */
+function showLoadError() {
+  if (!loadError) return;
+  const fromFileSystem = location.protocol === "file:";
+  const fsMsg = loadError.querySelector("[data-load-error-filesystem]");
+  const netMsg = loadError.querySelector("[data-load-error-network]");
+  if (fsMsg) fsMsg.hidden = !fromFileSystem;
+  if (netMsg) netMsg.hidden = fromFileSystem;
+  loadError.hidden = false;
+}
+
 async function loadCandidates() {
   const skeletons = Array.from({ length: 6 }, () => el("div", "skeleton-card"));
   grid.replaceChildren(...skeletons);
@@ -886,7 +921,7 @@ async function loadCandidates() {
   const results = await Promise.all(
     STUDENT_DIRS.map(async (slug) => {
       try {
-        const res = await fetch(`${slug}/config.json`, { cache: "no-store" });
+        const res = await fetch(`${slug}/config.json`, { cache: "force-cache" });
         if (!res.ok) return null;
         return buildCandidate(slug, await res.json());
       } catch {
@@ -899,7 +934,7 @@ async function loadCandidates() {
   if (!candidates.length) {
     grid.replaceChildren();
     showView("catalog", { force: true });
-    loadError.hidden = false;
+    showLoadError();
     resultCount.textContent = I18N.dict["status.noCandidates"] || "No candidates available";
     setFooterStatus(I18N.dict["footer.unavailable"] || "Data unavailable", true);
     return false;
@@ -1216,7 +1251,10 @@ function settleCarousel(index, instant) {
   const from = car.x;
   stopCarouselTween();
 
-  if (instant || REDUCED() || Math.abs(to - from) < 0.5) {
+  /* The carousel drag/tween is an interaction the user is directly
+     driving, so it stays live in lite — but it jumps rather than springs,
+     because a spring tween on a phone competes with scrolling for frames. */
+  if (instant || HEAVY() || Math.abs(to - from) < 0.5) {
     car.vx = 0;
     renderCarousel(to);
     return;
@@ -1923,7 +1961,7 @@ const matrix = {
 
 function initMatrix() {
   const canvas = matrixCanvas;
-  if (!canvas || REDUCED()) return;
+  if (!canvas || HEAVY()) return;
   const ctx = canvas.getContext("2d", { alpha: true });
   if (!ctx) return;
 
@@ -2109,7 +2147,7 @@ const HOT_SELECTOR =
   "a, button, [role='button'], input, select, textarea, .card, .slide, .chip, .tag, .nav-link, .footer-mail, [data-tilt]";
 
 function initCursor() {
-  if (!cursorEl || !FINE_POINTER() || REDUCED()) return;
+  if (!cursorEl || !FINE_POINTER() || HEAVY()) return;
   document.body.classList.add("has-pointer");
 
   const pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -2157,7 +2195,7 @@ function initCursor() {
 
 /* magnetic elements lean towards the pointer, then spring back */
 function initMagnetic(root = document) {
-  if (REDUCED() || !FINE_POINTER()) return;
+  if (HEAVY() || !FINE_POINTER()) return;
   root.querySelectorAll("[data-magnetic]").forEach((node) => {
     if (node.dataset.magneticReady) return;
     node.dataset.magneticReady = "1";
@@ -2178,7 +2216,7 @@ function initMagnetic(root = document) {
 
 /* 3D tilt + moving specular glare */
 function initTilt(root = document) {
-  if (REDUCED() || !FINE_POINTER()) return;
+  if (HEAVY() || !FINE_POINTER()) return;
   root.querySelectorAll("[data-tilt]").forEach((node) => {
     if (node.dataset.tiltReady) return;
     node.dataset.tiltReady = "1";
@@ -2210,7 +2248,7 @@ function initTilt(root = document) {
 /* hero orb drifts with the pointer */
 function initParallax() {
   const nodes = $$("[data-parallax]");
-  if (!nodes.length || REDUCED() || !FINE_POINTER()) return;
+  if (!nodes.length || HEAVY() || !FINE_POINTER()) return;
   const depth = Number(nodes[0].dataset.parallax) || 18;
   const target = { x: 0, y: 0 };
   const current = { x: 0, y: 0 };
@@ -2278,7 +2316,7 @@ function initPressFeedback() {
 
   document.addEventListener("click", (event) => {
     const button = event.target.closest(".btn");
-    if (!button || REDUCED()) return;
+    if (!button || HEAVY()) return;
     const box = button.getBoundingClientRect();
     const size = Math.max(box.width, box.height);
     const ripple = el("span", "btn-ripple");
@@ -2338,7 +2376,9 @@ function initScrollLayer() {
 }
 
 function initIdle() {
-  if (REDUCED()) return;
+  /* The idle state widens the aurora blur to 140px and restarts the drift
+     loops — the most expensive state on the page. Lite never enters it. */
+  if (HEAVY()) return;
   const IDLE_AFTER = 6500;
 
   const wake = () => {
@@ -2368,7 +2408,7 @@ function initIdle() {
 function scrollToSection(id) {
   const node = document.getElementById(id);
   if (!node) return;
-  node.scrollIntoView({ behavior: REDUCED() ? "auto" : "smooth", block: "start" });
+  node.scrollIntoView({ behavior: HEAVY() ? "auto" : "smooth", block: "start" });
 }
 
 /* =========================================================
@@ -2390,6 +2430,10 @@ function initEvents() {
   });
   searchClear.addEventListener("click", resetSearch);
   emptyReset.addEventListener("click", resetSearch);
+
+  // Retry affordance in the "could not load" panel (see showLoadError).
+  const reloadBtn = loadError && loadError.querySelector("[data-reload]");
+  if (reloadBtn) reloadBtn.addEventListener("click", () => location.reload());
 
   modal.addEventListener("click", (e) => {
     if (e.target.closest("[data-modal-close]")) closeModal();

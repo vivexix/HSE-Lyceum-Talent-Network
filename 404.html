@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page not found — HSE Lyceum Talent Network</title>
+    <meta name="description" content="That page does not exist on the HSE Lyceum Talent Network portal." />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#05060d" />
+    <meta name="color-scheme" content="dark" />
+
+    <link rel="icon" type="image/svg+xml" href="images/website-logo.svg" />
+
+    <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Styles for this page only. The portal's own components (.shell, .glass,
+         .kicker, .btn) are reused as-is; only the centring layout is new, kept
+         here so the main stylesheet stays purely about the site itself. -->
+    <style>
+      .nf {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        min-height: 100svh;
+        padding-block: clamp(40px, 10vh, 90px);
+        text-align: center;
+      }
+      .nf-card {
+        width: min(560px, 100%);
+        padding: clamp(28px, 5vw, 46px);
+      }
+      .nf-code {
+        margin: 0 0 6px;
+        font-family: var(--font-display);
+        font-size: clamp(64px, 13vw, 104px);
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        background: linear-gradient(150deg, #eef2ff, #8fb0ff 55%, #9b6bff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .nf-title {
+        margin: 0 0 12px;
+        font-size: clamp(19px, 2.6vw, 23px);
+      }
+      .nf-text {
+        margin: 0 0 26px;
+        color: var(--ink-2);
+      }
+      .nf-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .nf-path {
+        margin: 24px 0 0;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--ink-4);
+        word-break: break-all;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .nf .kicker-dot {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-field" aria-hidden="true">
+      <div class="aurora aurora--a"></div>
+      <div class="aurora aurora--b"></div>
+      <div class="aurora aurora--c"></div>
+      <div class="grain"></div>
+    </div>
+
+    <main class="nf">
+      <div class="nf-card glass">
+        <p class="kicker"><span class="kicker-dot"></span><span>HSE Lyceum · Talent Network</span></p>
+        <p class="nf-code">404</p>
+        <h1 class="nf-title">This page isn’t in the pool</h1>
+        <p class="nf-text">
+          The address you followed doesn’t match anything on this site. The
+          directory of applicant profiles lives on the main page.
+        </p>
+        <div class="nf-actions">
+          <a class="btn btn-primary" href="./" data-nf-home>
+            <span class="btn-label">Back to the directory</span>
+            <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13.5 13.5V8.5M8 13.5V3M2.5 13.5v-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+          </a>
+          <a class="btn btn-ghost" href="./#candidates">
+            <span class="btn-label">Browse candidates</span>
+          </a>
+        </div>
+        <p class="nf-path" data-nf-path hidden></p>
+      </div>
+    </main>
+
+    <script>
+      /* GitHub Pages serves this file *at the requested URL*, so a relative
+         "./" resolves against whatever path the visitor mistyped — a deep link
+         like /repo/nope/thing/ would send them to /repo/nope/ instead of the
+         site root. The deployment base is therefore discovered by probing
+         upwards for index.html, which works for a user page (base = "/") and
+         a project subdirectory alike. */
+      (function () {
+        var segments = location.pathname.split("/").filter(Boolean);
+        var pathEl = document.querySelector("[data-nf-path]");
+        if (pathEl) {
+          pathEl.textContent = location.pathname;
+          pathEl.hidden = false;
+        }
+
+        function candidates() {
+          // Longest first: the fewest directories to strip is the likeliest root.
+          // The base is joined without a leading slash on the segments, so a
+          // root-level path yields "/index.html" and never "//index.html".
+          var out = [];
+          for (var i = segments.length; i >= 0; i--) {
+            out.push("/" + segments.slice(0, i).concat("index.html").join("/"));
+          }
+          return out;
+        }
+
+        function probe(list) {
+          if (!list.length) return;
+          var url = list.shift();
+          fetch(url, { method: "HEAD" })
+            .then(function (res) {
+              if (res.ok) {
+                var base = url.slice(0, url.length - "index.html".length);
+                document.querySelectorAll("[data-nf-home]").forEach(function (a) {
+                  a.setAttribute("href", base);
+                });
+                document.querySelectorAll('a[href="./#candidates"]').forEach(function (a) {
+                  a.setAttribute("href", base + "#candidates");
+                });
+                return;
+              }
+              probe(list);
+            })
+            .catch(function () {
+              probe(list);
+            });
+        }
+
+        probe(candidates());
+      })();
+    </script>
+  </body>
+</html>

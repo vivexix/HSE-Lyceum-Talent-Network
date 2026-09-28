@@ -203,7 +203,7 @@ body.is-lang-in [data-lang-root] {
 .lang-veil {
   position: fixed;
   inset: 0;
-  z-index: 250; /* over the header (200), under the cursor (300) and modal (400) */
+  z-index: 250; /* over the header (200), under the modal (400) and the cursor (500) */
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -644,11 +644,23 @@ body.has-pointer .pointer-aura {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 300;
+  /* Above every other layer (modal 400, toast 420, language veil 250).
+     The native cursor is retired globally — `cursor: none` on
+     body.has-pointer * — so if this element is ever covered the user is
+     left with no pointer at all. `.cursor` is also the last child of
+     <body> in index.html, which is what actually makes it win on
+     WebKit: the modal panel and the toast use `backdrop-filter`, so they
+     get their own compositing layers and a z-index comparison alone
+     stopped being decisive there. */
+  z-index: 500;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.35s var(--ease-out);
   will-change: transform;
+  /* Belt and braces for the same problem: an explicit, isolated
+     stacking context on the root means nothing later in the document
+     can ever be composited over the cursor. */
+  isolation: isolate;
 }
 body.has-pointer .cursor {
   opacity: 1;
@@ -4076,7 +4088,180 @@ body.is-idle .slide {
 }
 
 /* ---------------------------------------------------------
-   21 · Reduced motion · forced colors · print
+   22 · Lite render profile (mobile / low-power)
+
+   The full design leans on three techniques that are close to free on
+   a desktop GPU and ruinous on a phone:
+
+   · three viewport-sized elements with `filter: blur(120px)`, animated
+     on transform for 30–42s on a loop. A large blur is re-rasterised
+     whenever its layer changes, so this alone can hold a mid-range
+     phone under 30fps while scrolling.
+   · `backdrop-filter` on .glass, the modal panel, the header and the
+     toast. Each forces a readback of what is behind it every frame.
+   · a requestAnimationFrame symbol-matrix canvas redrawing ~4200 cells
+     continuously.
+
+   `.lite` is set on <html> by the inline detector in index.html before
+   first paint. Nothing here removes content or interactivity — search,
+   filters, the carousel, the modal and both languages behave
+   identically. It removes only continuous, decorative work.
+   --------------------------------------------------------- */
+.lite .aurora {
+  /* Blur is the cost. A pre-blurred gradient is indistinguishable at
+     these opacities, so drop the filter and let the radial-gradient
+     itself carry the softness. Also stop the 30–42s drift loops. */
+  filter: none;
+  animation: none;
+  will-change: auto;
+  opacity: 0.5;
+}
+.lite .grain {
+  /* `mix-blend-mode` is a second full-screen compositing pass, and the
+     steps(6) shift re-rasterises a layer 2.2x the viewport every tick.
+     Keep the static texture — it is what dithers the gradients — but
+     never animate it. */
+  animation: none;
+  mix-blend-mode: normal;
+  opacity: 0.22;
+  inset: 0;
+  will-change: auto;
+}
+.lite body.is-idle .aurora,
+.lite body.is-idle .grain {
+  /* The idle "breathing" widens the blur to 140px, the single most
+     expensive state on the page. Lite never enters it. */
+  filter: none;
+  animation: none;
+  opacity: 0.5;
+}
+
+/* The matrix canvas is ~4200 cells redrawn per frame in JS. Hide it and
+   let the CSS grid behind it carry the texture. */
+.lite #matrixCanvas {
+  display: none;
+}
+.lite .hero-field {
+  opacity: 0.85;
+}
+
+/* Glass without the backdrop readback. The blur is what makes these
+   panels legible over a moving background, so lite trades it for a
+   solid-ish tint that still reads as a raised surface. */
+.lite .glass,
+.lite .modal-panel,
+.lite .toast,
+.lite .site-header.is-stuck,
+.lite .search-wrap,
+.lite .sort-menu {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.lite .modal-panel {
+  background: linear-gradient(158deg, rgba(20, 27, 51, 0.97), rgba(10, 14, 30, 0.97));
+}
+.lite .site-header.is-stuck {
+  background: rgba(6, 9, 20, 0.94);
+}
+.lite .toast {
+  background: rgba(12, 17, 36, 0.97);
+}
+
+/* Ambient blur layers that exist only to soften the background. */
+.lite .pointer-aura,
+.lite .cursor-halo,
+.lite .modal-glow,
+.lite .footer-glow {
+  filter: none;
+  animation: none;
+}
+.lite .pointer-aura {
+  /* `mix-blend-mode: screen` over a full viewport is another composite
+     pass on every pointer move. A plain low-alpha tint looks the same. */
+  mix-blend-mode: normal;
+  opacity: 0.5;
+}
+
+/* Long, spring-eased transitions on large surfaces are what make a phone
+   feel like it is lagging rather than merely animating. Keep the
+   interaction feedback, shorten the choreography. */
+.lite .card,
+.lite .slide,
+.lite .panel,
+.lite .stat-card,
+.lite .modal-panel,
+.lite .view-panel {
+  transition-duration: 0.18s;
+}
+.lite .btn {
+  transition-duration: 0.15s;
+}
+.lite .reveal,
+.lite [data-reveal] {
+  /* Blur-in reveals re-rasterise the whole element. Fade only. */
+  transition: opacity 0.3s var(--ease-out) !important;
+  filter: none !important;
+  transform: none !important;
+}
+.lite .view-panel,
+.lite .view-panel.is-active {
+  animation: none !important;
+}
+
+/* Language switch: the blur⇄blur wipe across the whole page is a
+   full-viewport filter animation. Lite swaps content without it. */
+.lite body.is-lang-out [data-lang-root] {
+  animation: lite-fade-out 0.16s var(--ease-out-soft) both;
+}
+.lite body.is-lang-in [data-lang-root] {
+  animation: lite-fade-in 0.2s var(--ease-out-soft) both;
+}
+.lite .lang-veil,
+.lite .lang-veil-bloom {
+  display: none;
+}
+
+/* Scrolling should never be interrupted by a smooth-scroll animation on
+   a device already struggling to keep up. */
+.lite html {
+  scroll-behavior: auto;
+}
+
+@keyframes lite-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes lite-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Cheap, static gradient dithering.
+
+   Android GPUs quantise gradients to 8 bits per channel, so the large
+   smooth radial fields band visibly — the "RGB pixel" look. The animated
+   .grain overlay was meant to break that up, but it relies on
+   `mix-blend-mode: soft-light`, which several Android compositors skip
+   or approximate, leaving the banding exposed.
+
+   This adds a blend-free dither to the ambient field: a tiny tiled SVG
+   noise texture at very low opacity in normal blend mode. It costs one
+   static background image — no animation, no extra compositing pass —
+   and reliably breaks up the steps. It is shown on every profile, since
+   the banding is a display-capability problem rather than a
+   performance one. */
+.bg-field::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23d)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+/* ---------------------------------------------------------
+   23 · Reduced motion · forced colors · print
    --------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   html {
