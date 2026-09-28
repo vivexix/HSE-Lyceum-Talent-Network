@@ -13,6 +13,10 @@ script.js:
 It replaces today's date-based token with the current date. Running it twice
 in one day is a no-op unless --force is passed, since a same-day re-run would
 produce the identical URL and defeat the purpose.
+
+With --force the trailing counter is incremented instead, so the token becomes a
+genuinely new URL even within the same day. (It used to just recompute the same
+date, which silently produced no change at all.)
 """
 import datetime as dt
 import re
@@ -21,6 +25,25 @@ import sys
 FILES = ["index.html", "404.html"]
 # Matches href="styles.css?v=..." and src="script.js?v=..."
 PATTERN = re.compile(r'((?:href|src)="(?:styles\.css|script\.js)\?v=)([0-9A-Za-z._-]+)(")')
+# A token looks like YYYYMMDD-N, with the counter letting us bump within a day.
+TOKEN = re.compile(r"^(\d{8})-(\d+)$")
+
+
+def next_token(old, today):
+    """Return the token to use, given the current one.
+
+    Normally this is today's date with a counter of 1. Under --force the
+    existing counter is incremented, so repeated same-day bumps still produce a
+    new URL instead of recomputing the value that is already deployed.
+    """
+    match = TOKEN.match(old)
+    if not match:
+        # Unrecognised shape: fall back to today's date rather than guessing.
+        return today
+    date_part, counter = match.groups()
+    if date_part == today.split("-")[0]:
+        return f"{date_part}-{int(counter) + 1}"
+    return today
 
 
 def main():
@@ -42,14 +65,16 @@ def main():
                      f"styles.css and script.js must use the same value")
 
         old = current.pop()
-        if old.startswith(today) and not force:
+        new = next_token(old, today) if force else today
+
+        if new == old:
             print(f"{path}: already up to date ({old}) — use --force to re-bump")
             continue
 
-        new_src = PATTERN.sub(lambda m: m.group(1) + today + m.group(3), src)
+        new_src = PATTERN.sub(lambda m: m.group(1) + new + m.group(3), src)
         with open(path, "w", encoding="utf-8", newline="") as fh:
             fh.write(new_src)
-        changed.append((path, old, today))
+        changed.append((path, old, new))
 
     if not changed:
         return
