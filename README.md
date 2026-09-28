@@ -165,6 +165,14 @@ The two things that actually cost frames on a phone are the large animated
 `blur()` and `backdrop-filter` — both are re-rasterised whenever the page
 moves, so they are the first things lite gives up.
 
+A filtering animation is expensive on **every** profile, not just lite, because
+`filter` cannot be composited on the GPU the way `opacity` and `transform` can.
+The scroll reveal and the `view-in` panel entrance therefore animate opacity and
+transform only, on all devices. Their motion is unchanged — they still rise,
+fade and scale — but a filter is no longer being repainted on every frame. This
+is why lite no longer needs to cancel a reveal blur: the expensive part was
+removed rather than being hidden behind a profile.
+
 Force either profile with a query parameter, which is the easiest way to
 compare them on one device:
 

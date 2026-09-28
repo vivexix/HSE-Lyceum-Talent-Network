@@ -3586,8 +3586,14 @@ body.is-idle .orb-core {
 [data-reveal] {
   opacity: 0;
   transform: translateY(24px);
-  filter: blur(6px);
-  transition: opacity 0.85s var(--ease-out), transform 0.85s var(--ease-out), filter 0.85s var(--ease-out);
+  /* The reveal used to start at `filter: blur(6px)` and animate it to `none` over
+     0.85s. That was the single most expensive thing on this path: a filter
+     animation re-rasterises the whole element on every frame, and unlike opacity
+     and transform it cannot be handed to the compositor, so the browser repaints
+     the layer instead. The motion is kept and only the blur is dropped, so the
+     element still rises and fades in — it just no longer costs a repaint per
+     frame. Duration is trimmed 0.85s -> 0.6s for the same reason. */
+  transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out);
   transition-delay: calc(var(--d, 0) * 90ms);
 }
 .reveal.is-inview,
@@ -3702,8 +3708,11 @@ body.is-idle .slide {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes view-in {
-  from { opacity: 0; transform: translateY(20px) scale(0.992); filter: blur(6px); }
-  to   { opacity: 1; transform: none; filter: blur(0); }
+  /* The blur is dropped here for the same reason as the scroll reveal: a
+     filtering animation repaints the layer every frame. The rise and scale are
+     both compositor-only, so they stay and still read as a distinct entrance. */
+  from { opacity: 0; transform: translateY(20px) scale(0.992); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes view-out {
   from { opacity: 1; transform: none; }
@@ -4286,10 +4295,11 @@ body.is-idle .slide {
 }
 .lite .reveal,
 .lite [data-reveal] {
-  /* The blur-in reveal re-rasterises the whole element, so lite drops the blur
-     and shortens the travel. The entry motion is deliberately kept: an earlier
-     `transform: none` here cancelled it entirely, which made the scroll
-     animations look like they had been removed rather than simplified. */
+  /* The entry motion is deliberately kept on lite: an earlier `transform: none`
+     here cancelled it entirely, which made the scroll animations look like they
+     had been removed rather than simplified. Lite only shortens the travel and
+     the duration. The blur this used to cancel is now gone for every profile,
+     since it was the expensive part rather than the visible part. */
   transition: opacity 0.45s var(--ease-out), transform 0.45s var(--ease-out) !important;
   filter: none !important;
 }
